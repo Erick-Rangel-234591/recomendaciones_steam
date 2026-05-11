@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from backend.api.endpoints import router as api_router
 from backend.data.loader import DataLoader
@@ -37,6 +38,14 @@ app = FastAPI(
     title="Steam Recommender API", 
     version="1.0.0",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Puerto por defecto de Vite
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite GET, POST, etc.
+    allow_headers=["*"],
 )
 
 # Integración del router de endpoints bajo el prefijo /api
