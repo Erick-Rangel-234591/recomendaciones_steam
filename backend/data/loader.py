@@ -14,6 +14,8 @@ class DataLoader:
         """
         print(f"Cargando datos desde {self.file_path}...")
         self.df = pd.read_csv(self.file_path)
+        
+        self.df = self.df[~((self.df['Positive'] == 0) & (self.df['Negative'] == 0))]
 
         # 1. Procesar Fechas (xsd:date)
         self.df['Release date'] = pd.to_datetime(self.df['Release date'], errors='coerce')
@@ -44,9 +46,6 @@ class DataLoader:
         pos = row['Positive']
         neg = row['Negative']
         total = pos + neg
-        
-        if total == 0:
-            return "No reviews"
         
         porcentaje_pos = (pos / total) * 100
 
@@ -81,4 +80,5 @@ class DataLoader:
             try: return ast.literal_eval(x)
             except: return []
         # Si es un string separado por comas o punto y coma: "A, B" o "A;B"
+        
         return [item.strip() for item in x.replace(';', ',').split(',')]

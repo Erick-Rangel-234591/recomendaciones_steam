@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from backend.models.schemas import FiltrosRecomendacion, RespuestaRecomendacion
+from backend.services.steam_client import SteamAPIClient 
 
 # Instanciamos el router
 router = APIRouter()
@@ -29,3 +30,40 @@ def recomendar_por_caracteristicas(filtros: FiltrosRecomendacion, request: Reque
     except Exception as e:
         # Captura de errores imprevistos en el cálculo matricial
         raise HTTPException(status_code=500, detail=f"Error interno del motor: {str(e)}")
+    
+    
+@router.get("/recomendaciones/biblioteca/{steam_id}", response_model=dict)
+def recomendar_por_biblioteca(steam_id: str, request: Request):
+    """
+    Consume la API oficial de Steam para obtener la biblioteca del usuario
+    y devuelve recomendaciones basadas en el perfil de sus juegos actuales.
+    """
+    engine = request.app.state.engine
+    if not engine:
+        raise HTTPException(status_code=500, detail="Motor de recomendación no inicializado.")
+
+    try:
+        # 1. Instanciar el cliente y consultar los servidores de Valve
+        cliente_steam = SteamAPIClient()
+        app_ids = cliente_steam.obtener_biblioteca_usuario(steam_id)
+        
+        # 2. Generar recomendaciones matemáticas
+        resultados = engine.obtener_recomendaciones_por_biblioteca(app_ids)
+        
+        if not resultados:
+            raise HTTPException(
+                status_code=404, 
+                detail="No se encontraron recomendaciones. La biblioteca del usuario es incompatible con el catálogo local."
+            )
+            
+        return {
+            "steam_id_consultado": steam_id,
+            "total_juegos_analizados": len(app_ids),
+            "total_resultados": len(resultados),
+            "recomendaciones": resultados
+        }
+
+    except ValueError as ve:
+        raise HTTPException(status_code=500, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

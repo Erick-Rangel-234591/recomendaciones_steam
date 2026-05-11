@@ -19,7 +19,6 @@ class ResenaEnum(str, Enum):
     NEGATIVE = "Negative"
     VERY_NEGATIVE = "Very Negative"
     OVERWHELMINGLY_NEGATIVE = "Overwhelmingly Negative"
-    NO_REVIEWS = "No reviews"
 
 # ==========================================
 # 2. MODELOS DE LA ONTOLOGÍA (Entidades Core)
@@ -39,8 +38,9 @@ class JuegoBase(BaseModel):
     fecha_lanzamiento: date
     resena: ResenaEnum
     es_gratuito: bool
-    generos: List[str]  # Simplificado a List[str] para facilitar la respuesta JSON
+    generos: List[str]
     tags: List[str] = Field(..., min_items=1, max_items=3)
+    imagen_url: str
 
 # ==========================================
 # 3. MODELOS DE PETICIÓN (Request - Frontend a Backend)
@@ -52,7 +52,8 @@ class FiltrosRecomendacion(BaseModel):
     ajuste los selectores en el panel de control.
     """
     precio_maximo: Optional[float] = Field(None, ge=0)
-    anio_lanzamiento_min: Optional[int] = Field(None, ge=1990, le=2025)
+    anio_lanzamiento_min: Optional[int] = Field(None, ge=1990)
+    anio_lanzamiento_max: Optional[int] = Field(None, le=2026)
     resena_minima: Optional[ResenaEnum] = None
     solo_gratuitos: Optional[bool] = False
     
@@ -64,6 +65,9 @@ class FiltrosRecomendacion(BaseModel):
         json_schema_extra = {
             "example": {
                 "precio_maximo": 30.0,
+                "anio_lanzamiento_min": 2015,
+                "anio_lanzamiento_max": 2023,
+                "resena_minima": "Very Positive",
                 "solo_gratuitos": False,
                 "generos_deseados": ["Action", "RPG"],
                 "tags_deseados": ["Shooter"]
