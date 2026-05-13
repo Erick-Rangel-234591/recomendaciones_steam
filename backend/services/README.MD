@@ -1,60 +1,82 @@
 # Steam Discovery Engine: Documentación Técnica y Fundamentos Matemáticos
 
-Este proyecto implementa un sistema de recomendación híbrido basado en contenido que opera sobre un espacio vectorial de alta dimensionalidad. El motor procesa metadatos de más de 80,000 videojuegos para calcular afinidades semánticas mediante álgebra lineal.
+Este proyecto implementa un sistema de recomendación híbrido basado en contenido que opera sobre un espacio vectorial de alta dimensionalidad. El motor procesa metadatos de más de 80,000 videojuegos para calcular afinidades semánticas mediante álgebra lineal y procesamiento matricial.
 
-## 1. El Modelo Matemático: Similitud del Coseno
+---
 
-El núcleo del motor utiliza la **Similitud del Coseno** para medir la cercanía entre dos vectores en un espacio multidimensional. A diferencia de la distancia euclidiana (que mide la longitud física entre puntos), la similitud del coseno mide el ángulo entre dos vectores, lo que la hace ideal para comparar perfiles de juegos independientemente de la cantidad de etiquetas que posean.
+## 1. El Modelo Matemático: Similitud del Coseno en Espacios de Alta Dimensionalidad
 
-La ecuación fundamental es:
+El sistema no procesa "juegos" como entidades aisladas, sino como **tensores de características** situados en un espacio vectorial $n$-dimensional, donde cada dimensión representa un atributo único (Género o Tag) del catálogo de Steam.
+
+### 1.1 Representación Vectorial y Espacio de Características
+Cada juego $J$ se proyecta en un espacio vectorial $\mathbb{R}^n$. Inicialmente, los componentes son binarios (0 o 1), pero el motor los transforma mediante una ponderación escalar $W$. Un vector de juego $\mathbf{A}$ se define como:
+
+$$\mathbf{A} = [a_1 w_1, a_2 w_2, \dots, a_n w_n]$$
+
+Donde $a_i \in \{0, 1\}$ indica la presencia del atributo y $w_i$ es el peso asignado a esa dimensión según su importancia ontológica (Género: 0.45, Tag: 0.30, etc.).
+
+### 1.2 Producto Escalar (Dot Product)
+El numerador de la fórmula mide la coincidencia acumulada entre el perfil de búsqueda (o perfil de usuario) y cada juego del catálogo. Representa la suma de las proyecciones comunes:
+
+$$\mathbf{A} \cdot \mathbf{B} = \sum_{i=1}^{n} a_i b_i$$
+
+Si ambos vectores comparten una dimensión activa (ej. ambos son "RPG"), el producto suma el cuadrado de su peso a la magnitud total. Si uno de los dos carece del atributo ($0$), la dimensión se anula para ese cálculo, penalizando la falta de coincidencia estructural.
+
+### 1.3 Normalización de Magnitud (Norma L2)
+Para evitar el **sesgo de densidad** (donde juegos con muchas etiquetas parecen más similares solo por probabilidad), aplicamos la **Norma Euclídea**:
+
+$$\|\mathbf{V}\| = \sqrt{\sum_{i=1}^{n} v_i^2}$$
+
+Al dividir el producto escalar por el producto de las normas, el algoritmo realiza una **normalización de unidad**. Esto garantiza que el resultado dependa exclusivamente de la **orientación** del vector y no de la cantidad de etiquetas.
 
 $$\text{similitud}(\mathbf{A}, \mathbf{B}) = \cos(\theta) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|}$$
 
-Donde:
-* $\mathbf{A} \cdot \mathbf{B}$ es el producto punto de los vectores.
-* $\|\mathbf{A}\| \|\mathbf{B}\|$ es el producto de sus normas (magnitudes).
-* El resultado oscila entre **0** (ortogonalidad total/sin similitud) y **1** (vectores idénticos).
+### 1.4 Interpretación del Ángulo $\theta$
+* **$\theta = 0^\circ$ ($\cos \theta = 1$):** Vectores colineales. Coincidencia exacta.
+* **$\theta = 90^\circ$ ($\cos \theta = 0$):** Vectores ortogonales. Sin intersección de gustos.
+* **Match Score:** Traducimos el rango $[0.7, 1.0]$ en una escala porcentual del **70% al 100%**.
+
+---
 
 ## 2. Arquitectura de Pesos (Ontología Ponderada)
 
-No todas las características de un juego tienen el mismo valor semántico. El sistema aplica una **Matriz de Pesos Estructurales** para priorizar la ontología (géneros) sobre las etiquetas descriptivas (tags). Los pesos configurados son:
+Aplicamos una **Matriz de Pesos Estructurales** para priorizar la ontología sobre las etiquetas descriptivas:
 
-| Dimensión | Peso ($W$) | Descripción |
+| Dimensión | Peso ($W$) | Propósito Semántico |
 | :--- | :--- | :--- |
-| **Géneros** | **45%** | Estructura fundamental del juego (ej. RPG, Action). |
-| **Tags** | **30%** | Características descriptivas (ej. Open World, Soulslike). |
-| **Reseñas** | **15%** | Factor de calidad externa (Validación de la comunidad). |
-| **Precio** | **10%** | Factor de accesibilidad económica. |
+| **Géneros** | **45%** | Estructura fundamental (ej. RPG, Action). |
+| **Tags** | **30%** | Mecánicas secundarias (ej. Open World, Souls-like). |
+| **Reseñas** | **15%** | Validación social y factor de calidad comunitaria. |
+| **Precio** | **10%** | Accesibilidad económica relativa. |
 
-El vector de características final $\mathbf{V}_{final}$ se construye como la concatenación ponderada de sub-vectores:
-$$\mathbf{V}_{final} = [ ( \vec{V}_{g} \cdot 0.45 ), ( \vec{V}_{t} \cdot 0.30 ), ( \vec{V}_{r} \cdot 0.15 ), ( \vec{V}_{p} \cdot 0.10 ) ]$$
+---
 
-## 3. Flujos de Generación de Vectores
-
-El motor es capaz de generar el vector de entrada de dos formas distintas antes de realizar la comparación:
+## 3. Generación de Perfiles de Usuario
 
 ### A. Perfilado por Características (Vector Sintético)
-El usuario define parámetros explícitos. El sistema crea un vector "ideal" en tiempo real donde los bits correspondientes a los géneros y tags seleccionados se activan ($1$), y el resto permanece en $0$.
+El sistema crea un vector "ideal" basado en los filtros del frontend, activando dimensiones específicas con pesos predefinidos.
 
-### B. Perfilado por Biblioteca (Vector Centroide)
-Para recomendaciones basadas en el historial de Steam, el sistema calcula el **Centroide del Usuario**. Si un usuario posee $n$ juegos, el vector resultante $\vec{U}$ es la media aritmética de los vectores de todos sus juegos:
+### B. Perfilado por Biblioteca (Centroide Geométrico)
+Para recomendaciones basadas en Steam ID, calculamos el **Centroide de la Biblioteca**:
 
-$$\vec{U} = \frac{1}{n} \sum_{i=1}^{n} \vec{G}_i$$
+$$\vec{U}_{centroide} = \frac{\sum_{i=1}^{k} \vec{G}_i}{k}$$
 
-Este centroide representa el "punto de gravedad" de los gustos del usuario en el espacio vectorial.
+Este vector promedio representa el "punto de gravedad" de los gustos del usuario en el espacio vectorial.
+
+---
 
 ## 4. Pipeline de Filtrado Estricto (Hard Constraints)
 
-Para optimizar el rendimiento y garantizar la relevancia, el sistema aplica una máscara booleana previa al cálculo del coseno. Este proceso elimina el ruido (juegos sin reseñas o "shovelware") y respeta los límites físicos de la búsqueda:
+Antes del cálculo vectorial, se aplica una máscara booleana para eliminar el ruido:
+1.  **Limpieza de Datos:** Eliminación de juegos con 0 reseñas (Shovelware).
+2.  **Rango Temporal:** $Año_{min} \leq Año_{juego} \leq Año_{max}$.
+3.  **Límite de Costo:** $Precio_{juego} \leq Precio_{max}$.
+4.  **Umbral de Calidad:** Conversión de categorías ordinales (`Very Positive`, etc.) a valores escalares para comparación de umbral.
 
-1.  **Filtrado de Calidad:** Eliminación de registros donde $\text{Positive} + \text{Negative} = 0$.
-2.  **Restricción de Rango:** $Año_{min} \leq Año_{juego} \leq Año_{max}$.
-3.  **Restricción de Precio:** $Precio_{juego} \leq Precio_{max}$.
-4.  **Reseña Mínima:** Conversión de categorías ordinales a escalares para asegurar que $Calidad_{juego} \geq Calidad_{solicitada}$.
+---
 
-## 5. Implementación Tecnológica
-
-* **Backend:** FastAPI (Python 3.10+).
-* **Procesamiento de Datos:** Pandas & NumPy.
-* **Machine Learning:** Scikit-Learn (Cosine Similarity & MultiLabelBinarizer).
-* **Integración:** Steamworks Web API para recuperación de bibliotecas en tiempo real.
+## 5. Stack Tecnológico
+* **Backend:** FastAPI (Python).
+* **Ciencia de Datos:** Pandas, NumPy, Scikit-Learn.
+* **API Externa:** Steamworks Web API.
+* **Frontend:** React + Vite.

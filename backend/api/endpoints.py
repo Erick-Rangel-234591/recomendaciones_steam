@@ -5,6 +5,22 @@ from backend.services.steam_client import SteamAPIClient
 # Instanciamos el router
 router = APIRouter()
 
+@router.get("/catalog/genres")
+def get_available_genres(request: Request):
+    """Devuelve la lista de géneros disponibles en el catálogo."""
+    engine = request.app.state.engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Motor de recomendación no inicializado.")
+    return {"genres": list(engine.mlb_genres.classes_)}
+
+@router.get("/catalog/tags")
+def get_available_tags(request: Request):
+    """Devuelve la lista de tags disponibles en el catálogo."""
+    engine = request.app.state.engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Motor de recomendación no inicializado.")
+    return {"tags": list(engine.mlb_tags.classes_)}
+
 @router.post("/recomendaciones/caracteristicas", response_model=RespuestaRecomendacion)
 def recomendar_por_caracteristicas(filtros: FiltrosRecomendacion, request: Request):
     """
@@ -64,6 +80,6 @@ def recomendar_por_biblioteca(steam_id: str, request: Request):
         }
 
     except ValueError as ve:
-        raise HTTPException(status_code=500, detail=str(ve))
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -82,6 +82,11 @@ body {
   border-radius: 4px;
 }
 
+.filter-item select[multiple] {
+  height: 120px;
+  overflow-y: auto;
+}
+
 .checkbox-item { flex-direction: row; align-items: center; justify-content: center; gap: 15px; }
 .checkbox-item input { width: 25px; height: 25px; }
 
@@ -149,3 +154,147 @@ body {
 
 .price { color: #fff; font-weight: bold; }
 .review { color: #66c0f4; }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--panel);
+  border-radius: 8px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #2a475e;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #c6d4df;
+  font-size: 2rem;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.modal-close:hover {
+  color: #fff;
+}
+
+.modal-header {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid #3d4450;
+}
+
+.modal-image {
+  width: 120px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.modal-title-section h2 {
+  margin: 0 0 10px 0;
+  color: #fff;
+  font-size: 1.8rem;
+}
+
+.modal-match-score {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.match-percentage {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #66c0f4;
+}
+
+.match-explanation {
+  font-size: 0.9rem;
+  color: #c6d4df;
+}
+
+.modal-details {
+  padding: 20px;
+}
+
+.detail-section {
+  margin-bottom: 25px;
+}
+
+.detail-section h3 {
+  color: #67c1f5;
+  margin: 0 0 15px 0;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.detail-item {
+  background: #23262e;
+  padding: 10px 15px;
+  border-radius: 4px;
+  border: 1px solid #3d4450;
+}
+
+.detail-item strong {
+  color: #66c0f4;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background: #2a475e;
+  color: #c6d4df;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.detail-section p {
+  color: #c6d4df;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+
+/* Make cards clickable */
+.game-card {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.game-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+}

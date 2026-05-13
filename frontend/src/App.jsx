@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
@@ -19,6 +19,38 @@ function App() {
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [availableGenres, setAvailableGenres] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const openGameDetails = (juego) => {
+    setSelectedGame(juego);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedGame(null);
+  };
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [genresRes, tagsRes] = await Promise.all([
+          fetch('http://localhost:8000/api/catalog/genres'),
+          fetch('http://localhost:8000/api/catalog/tags')
+        ]);
+        const genresData = await genresRes.json();
+        const tagsData = await tagsRes.json();
+        setAvailableGenres(genresData.genres);
+        setAvailableTags(tagsData.tags);
+      } catch (err) {
+        console.error('Error fetching options:', err);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   const ejecutarBusqueda = async (e) => {
     e.preventDefault();
@@ -86,14 +118,22 @@ function App() {
             <div className="advanced-filters-grid">
               {/* FILA 1: Ontología (Géneros y Tags) */}
               <div className="filter-item full-width">
-                <label>Géneros Deseados (Separados por coma)</label>
-                <input type="text" placeholder="Action, RPG, Adventure..." 
-                  onChange={(e) => setFiltros({...filtros, generos_deseados: e.target.value.split(',').map(s => s.trim()).filter(s => s !== "")})} />
+                <label>Géneros Deseados</label>
+                <select multiple value={filtros.generos_deseados} 
+                  onChange={(e) => setFiltros({...filtros, generos_deseados: Array.from(e.target.selectedOptions, option => option.value)})}>
+                  {availableGenres.map(genre => (
+                    <option key={genre} value={genre}>{genre}</option>
+                  ))}
+                </select>
               </div>
               <div className="filter-item full-width">
                 <label>Etiquetas (Tags) Específicas</label>
-                <input type="text" placeholder="Shooter, Indie, Open World..." 
-                  onChange={(e) => setFiltros({...filtros, tags_deseados: e.target.value.split(',').map(s => s.trim()).filter(s => s !== "")})} />
+                <select multiple value={filtros.tags_deseados} 
+                  onChange={(e) => setFiltros({...filtros, tags_deseados: Array.from(e.target.selectedOptions, option => option.value)})}>
+                  {availableTags.map(tag => (
+                    <option key={tag} value={tag}>{tag}</option>
+                  ))}
+                </select>
               </div>
 
               {/* FILA 2: Precio y Tipo */}
@@ -125,7 +165,12 @@ function App() {
                   <option value="Overwhelmingly Positive">Extremadamente Positivas</option>
                   <option value="Very Positive">Muy Positivas</option>
                   <option value="Positive">Positivas</option>
+                  <option value="Mostly Positive">Mayormente Positivas</option>
                   <option value="Mixed">Mixtas</option>
+                  <option value="Mostly Negative">Mayormente Negativas</option>
+                  <option value="Negative">Negativas</option>
+                  <option value="Very Negative">Muy Negativas</option>
+                  <option value="Overwhelmingly Negative">Extremadamente Negativas</option>
                 </select>
               </div>
             </div>
@@ -142,7 +187,7 @@ function App() {
       <main className="results-container">
         <div className="grid">
           {resultados.map((juego) => (
-            <article key={juego.app_id} className="game-card">
+            <article key={juego.app_id} className="game-card" onClick={() => openGameDetails(juego)}>
               <div className="card-image">
                 <img src={juego.imagen_url} alt={juego.titulo} />
                 <div className="score-badge">{(juego.match_score).toFixed(1)}% Match</div>
@@ -161,6 +206,61 @@ function App() {
           ))}
         </div>
       </main>
+
+      {showModal && selectedGame && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <div className="modal-header">
+              <img src={selectedGame.imagen_url} alt={selectedGame.titulo} className="modal-image" />
+              <div className="modal-title-section">
+                <h2>{selectedGame.titulo}</h2>
+                <div className="modal-match-score">
+                  <span className="match-percentage">{selectedGame.match_score.toFixed(1)}% Match</span>
+                  <span className="match-explanation">
+                    Este juego fue recomendado porque coincide con tus preferencias
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="modal-details">
+              <div className="detail-section">
+                <h3>Características del Juego</h3>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <strong>Precio:</strong> {selectedGame.precio === 0 ? 'Gratuito' : `$${selectedGame.precio}`}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Fecha de Lanzamiento:</strong> {new Date(selectedGame.fecha_lanzamiento).toLocaleDateString()}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Reseñas:</strong> {selectedGame.resena}
+                  </div>
+                  <div className="detail-item">
+                    <strong>Tipo:</strong> {selectedGame.es_gratuito ? 'Gratuito' : 'Pago'}
+                  </div>
+                </div>
+              </div>
+              <div className="detail-section">
+                <h3>Géneros</h3>
+                <div className="tags-list">
+                  {selectedGame.generos.map(g => (
+                    <span key={g} className="tag-genre">{g}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="detail-section">
+                <h3>Etiquetas (Tags)</h3>
+                <div className="tags-list">
+                  {selectedGame.tags.map(t => (
+                    <span key={t} className="tag">{t}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

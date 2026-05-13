@@ -8,7 +8,7 @@ class RecommenderEngine:
     def __init__(self, df: pd.DataFrame):
         self.df = df.reset_index(drop=True)
         
-        # 1. Pesos Prioritarios (Sin sesgos de tiempo)
+        # 1. Pesos Prioritarios
         self.W_GENRE = 0.45
         self.W_TAGS = 0.30
         self.W_REVIEW = 0.15
@@ -49,7 +49,7 @@ class RecommenderEngine:
         ])
         print(f"Matriz terminada. Dimensiones: {self.features_matrix.shape}")
 
-    def obtener_recomendaciones(self, filtros: FiltrosRecomendacion, top_n: int = 10):
+    def obtener_recomendaciones(self, filtros: FiltrosRecomendacion, top_n: int = 20):
         # 1. Filtros Estrictos (Constraints)
         mask = pd.Series(True, index=self.df.index)
         
@@ -72,7 +72,6 @@ class RecommenderEngine:
             mask &= (self.df['Price'] <= filtros.precio_maximo)
             print(f"Tras filtro precio: {mask.sum()}")
 
-        # --- SANITIZACIÓN ABSOLUTA DE RESEÑAS ---
         if filtros.resena_minima:
             # 1. Normalizamos el diccionario base (minúsculas y sin espacios)
             safe_map = {str(k).lower().strip(): float(v) for k, v in self.review_map.items()}
@@ -90,7 +89,6 @@ class RecommenderEngine:
             # 5. Aplicamos la máscara final
             mask &= (reseñas_numericas >= valor_minimo_deseado)
             print(f"Tras filtro reseña (>= {valor_minimo_deseado}): {mask.sum()}")
-        # ----------------------------------------
 
         indices_filtrados = self.df[mask].index
         if len(indices_filtrados) == 0:
@@ -101,7 +99,7 @@ class RecommenderEngine:
         user_genre_vec = self.mlb_genres.transform([filtros.generos_deseados]) * self.W_GENRE
         user_tag_vec = self.mlb_tags.transform([filtros.tags_deseados]) * self.W_TAGS
         
-        target_review = self.review_map.get(filtros.resena_minima, 0.8) * self.W_REVIEW
+        target_review = self.review_map.get(str(filtros.resena_minima.value), 0.8) * self.W_REVIEW
         target_price = (1.0 if filtros.solo_gratuitos else 0.7) * self.W_PRICE
 
         user_vector = np.hstack([
@@ -142,7 +140,7 @@ class RecommenderEngine:
 
         return recomendaciones.to_dict('records')
     
-    def obtener_recomendaciones_por_biblioteca(self, app_ids_usuario: list, top_n: int = 10):
+    def obtener_recomendaciones_por_biblioteca(self, app_ids_usuario: list, top_n: int = 20):
         # 1. Identificar los juegos del usuario que existen en nuestro dataset local
         juegos_usuario = self.df[self.df['AppID'].isin(app_ids_usuario)]
         
