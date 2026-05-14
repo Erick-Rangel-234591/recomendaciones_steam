@@ -27,13 +27,11 @@ async def lifespan(app: FastAPI):
     app.state.engine = RecommenderEngine(df_procesado)
     print("Servidor listo para recibir peticiones.")
     
-    yield # Aquí el servidor se queda escuchando peticiones
+    yield
     
-    # Lo que va debajo del yield se ejecuta cuando el servidor se apaga
     app.state.engine = None
     print("Memoria liberada. Servidor apagado.")
 
-# Inicialización de FastAPI con el ciclo de vida definido
 app = FastAPI(
     title="Steam Recommender API", 
     version="1.0.0",
@@ -42,11 +40,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permitir cualquier origen en desarrollo
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Permite GET, POST, etc.
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Integración del router de endpoints bajo el prefijo /api
 app.include_router(api_router, prefix="/api")

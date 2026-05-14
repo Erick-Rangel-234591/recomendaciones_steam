@@ -19,3 +19,10 @@ se obtiene de aqui: https://steamcommunity.com/dev/apikey
 ---
 
 uvicorn backend.main:app --reload
+
+---
+otra consola
+
+npm install
+
+npm run dev

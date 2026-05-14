@@ -35,7 +35,7 @@ def recomendar_por_caracteristicas(filtros: FiltrosRecomendacion, request: Reque
 
     try:
         # Llamamos a la función de Similitud del Coseno que construimos en el engine.py
-        # Solicitamos el Top 10 de resultados
+        # Solicitamos el Top n de resultados
         resultados = engine.obtener_recomendaciones(filtros, top_n=10)
         
         # Formateamos la respuesta final

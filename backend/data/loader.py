@@ -17,7 +17,7 @@ class DataLoader:
         
         self.df = self.df[~((self.df['Positive'] == 0) & (self.df['Negative'] == 0))]
 
-        # 1. Procesar Fechas (xsd:date)
+        # 1. Procesar Fechas
         self.df['Release date'] = pd.to_datetime(self.df['Release date'], errors='coerce')
         # Llenar fechas nulas con una fecha muy antigua para evitar errores
         self.df['Release date'] = self.df['Release date'].fillna(datetime(1970, 1, 1))
@@ -26,16 +26,14 @@ class DataLoader:
         self.df['es_gratuito'] = self.df['Price'] == 0
 
         # 3. Clasificar Reseñas (steam:resena)
-        # Aplicamos la lógica matemática que definiste para las 9 categorías
         self.df['resena_categoria'] = self.df.apply(self._calcular_categoria_resena, axis=1)
 
         # 4. Convertir Tags y Géneros a Listas
-        # En el CSV suelen venir como "Acción;RPG", los convertimos a ['Acción', 'RPG']
         self.df['Genres'] = self.df['Genres'].apply(self._limpiar_listas)
         self.df['Tags'] = self.df['Tags'].apply(self._limpiar_listas)
 
-        # 5. Limpieza Final de la Ontología
-        # Solo nos quedamos con los 3 primeros tags como dice la restricción (max 3)
+        # 5. Limitar tags
+        # max 3 tags por regla de ontologia
         self.df['Tags'] = self.df['Tags'].apply(lambda x: x[:3])
 
         print(f"Procesamiento completado. {len(self.df)} juegos listos.")
@@ -72,13 +70,12 @@ class DataLoader:
         """Convierte strings de texto en listas de Python."""
         if pd.isna(x):
             return []
-        # Si ya es una lista (por ejemplo, si se cargó de un formato específico)
+        
         if isinstance(x, list):
             return x
-        # Si es un string con formato de lista de Python: "['A', 'B']"
+        
         if x.startswith('['):
             try: return ast.literal_eval(x)
             except: return []
-        # Si es un string separado por comas o punto y coma: "A, B" o "A;B"
         
         return [item.strip() for item in x.replace(';', ',').split(',')]
